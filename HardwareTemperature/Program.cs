@@ -12,11 +12,14 @@
 using OpenHardwareMonitor.Hardware;
 using System;
 using System.Timers;
+using System.IO;
 
 namespace HardwareTemperature
 {
     class Program
     {
+        static String line = null;
+
         static void Main(string[] args)
         {
             // add CPU and GPU as hardware
@@ -24,7 +27,11 @@ namespace HardwareTemperature
             Computer computer = new Computer() { CPUEnabled = true, GPUEnabled = true };
             computer.Open();
 
+            String filePath = "tmp.txt";
+            filePath = DateTime.Now.ToString("yyyMMddHHmmss") + ".csv";
+
             Timer timer = new Timer() { Enabled = true, Interval = 1000 };
+
             timer.Elapsed += delegate (object sender, ElapsedEventArgs e)
             {
                 Console.Clear();
@@ -41,17 +48,34 @@ namespace HardwareTemperature
                         if (sensor.SensorType == SensorType.Temperature)
                         {
                             Console.WriteLine("{0}: {1}°C", sensor.Name, sensor.Value);
+                            Program.line += sensor.Value + ",";
                             // Console.WriteLine("{0}: {1}°F", sensor.Name, sensor.Value*1.8+32);
                         }
 
                     }
+                    
                     Console.WriteLine();
+                    Program.line += "\n";
+                    
+                    if (Program.line.Length > 10240)
+                    {
+                        using (StreamWriter sw = new StreamWriter(filePath, true))
+                        {
+                            sw.WriteLine(Program.line);
+                        }
+                        
+                        Program.line = null;
+                    }
                 }
                 Console.WriteLine("Press Enter to exit");
             };
 
             // press enter to exit
             Console.ReadLine();
+            using (StreamWriter sw = new StreamWriter(filePath, true))
+            {
+                sw.WriteLine(Program.line);
+            }
         }
     }
 }
